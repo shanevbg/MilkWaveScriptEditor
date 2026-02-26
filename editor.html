@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milkwave Script Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Anybody:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   MILKWAVE SCRIPT EDITOR — Oscilloscope / Waveform Monitor Theme
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Palette ── */
+  --bg:          #080b0e;
+  --bg-panel:    #0c1014;
+  --bg-surface:  #101820;
+  --bg-row-hover:#0f1a22;
+  --bg-row-alt:  #0a0f14;
+  --border:      #1a2a34;
+  --border-hi:   #2a4050;
+
+  --green:       #39ff7f;
+  --green-dim:   #1a7a3e;
+  --green-glow:  #39ff7f44;
+  --amber:       #ffb347;
+  --amber-dim:   #7a5520;
+  --cyan:        #47d4ff;
+  --cyan-dim:    #1a5a70;
+  --pink:        #ff6b9d;
+  --pink-dim:    #7a2a4a;
+  --red:         #ff4757;
+  --steel:       #5a7a8a;
+  --steel-dim:   #3a4a54;
+  --text:        #c8d8e0;
+  --text-dim:    #5a7080;
+  --text-bright: #e8f0f4;
+  --white:       #e0e8ec;
+
+  /* ── Typography ── */
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+  --font-head: 'Anybody', 'IBM Plex Mono', sans-serif;
+
+  /* ── Layout ── */
+  --h-header:  48px;
+  --h-toolbar: 40px;
+  --h-status:  28px;
+  --h-batch:   44px;
+  --row-h:     34px;
+
+  /* ── Badge colors ── */
+  --badge-nav:     var(--green);
+  --badge-nav-bg:  #39ff7f18;
+  --badge-set:     var(--amber);
+  --badge-set-bg:  #ffb34718;
+  --badge-vis:     var(--cyan);
+  --badge-vis-bg:  #47d4ff18;
+  --badge-act:     var(--pink);
+  --badge-act-bg:  #ff6b9d18;
+  --badge-msg:     var(--text);
+  --badge-msg-bg:  #c8d8e010;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ── Scanline + CRT overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+  mix-blend-mode: multiply;
+}
+
+/* ── CRT vignette ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+}
+
+/* ═══ LAYOUT SHELL ═══ */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+/* ═══ HEADER ═══ */
+#header {
+  height: var(--h-header);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+#header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green) 20%, var(--green) 80%, transparent);
+  opacity: 0.4;
+  animation: glowSweep 4s ease-in-out infinite;
+}
+
+@keyframes glowSweep {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.6; }
+}
+
+/* ── Waveform bars in header ── */
+.wave-bar {
+  width: 3px;
+  background: var(--green);
+  border-radius: 1px;
+  opacity: 0.5;
+  animation: waveBar var(--dur, 1s) ease-in-out infinite alternate;
+}
+
+@keyframes waveBar {
+  0% { height: 4px; opacity: 0.3; }
+  100% { height: var(--max-h, 20px); opacity: 0.7; }
+}
+
+#header-title {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+  text-shadow: 0 0 12px var(--green-glow);
+  white-space: nowrap;
+}
+
+#header-title span {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-left: 10px;
+}
+
+#header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ═══ TOOLBAR ═══ */
+#toolbar {
+  height: var(--h-toolbar);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.tb-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 6px;
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.btn:hover {
+  background: var(--border);
+  border-color: var(--border-hi);
+  color: var(--text-bright);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn.accent {
+  border-color: var(--green-dim);
+  color: var(--green);
+}
+
+.btn.accent:hover {
+  background: var(--green-dim);
+  border-color: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+}
+
+.btn.danger {
+  border-color: #4a1a1a;
+  color: var(--red);
+}
+
+.btn.danger:hover {
+  background: #2a0f0f;
+  border-color: var(--red);
+}
+
+.btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+a.btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ═══ MAIN CONTENT ═══ */
+#content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Grid pattern on table area ── */
+#table-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 100% var(--row-h), 200px var(--row-h);
+  background-position: 0 0;
+  background-attachment: local;
+  background-color: var(--bg);
+}
+
+/* ── Scrollbar ── */
+#table-area::-webkit-scrollbar { width: 7px; }
+#table-area::-webkit-scrollbar-track { background: var(--bg); }
+#table-area::-webkit-scrollbar-thumb {
+  background: var(--steel-dim);
+  border-radius: 3px;
+}
+#table-area::-webkit-scrollbar-thumb:hover { background: var(--steel); }
+
+/* ═══ TABLE ═══ */
+#tbl {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+#tbl thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#tbl thead th {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--green-dim);
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--steel);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.c-drag { width: 22px; text-align: center; }
+.c-chk  { width: 30px; text-align: center; }
+.c-idx  { width: 38px; text-align: right; padding-right: 10px !important; }
+.c-line { /* flex remaining */ }
+.c-badges { width: 260px; }
+.c-acts { width: 80px; text-align: center; }
+
+#tbl tbody tr {
+  border-bottom: 1px solid #0e1418;
+  transition: background 0.1s;
+  height: var(--row-h);
+}
+
+#tbl tbody tr:hover {
+  background: var(--bg-row-hover);
+}
+
+#tbl tbody tr.selected {
+  background: #0d1e28;
+}
+
+#tbl tbody tr.selected:hover {
+  background: #102430;
+}
+
+#tbl tbody tr.is-comment {
+  opacity: 0.45;
+}
+
+#tbl tbody tr.is-blank {
+  height: 14px;
+  background: transparent;
+}
+
+#tbl tbody tr.is-blank td {
+  padding: 0;
+  border: none;
+}
+
+.delay-line {
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin: 6px 20px;
+  position: relative;
+}
+
+.delay-label {
+  position: absolute;
+  right: 0;
+  top: -8px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--steel-dim);
+  text-transform: uppercase;
+}
+
+#tbl td {
+  padding: 4px 8px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Drag handle ── */
+.drag-handle {
+  cursor: grab;
+  color: var(--steel-dim);
+  font-size: 11px;
+  user-select: none;
+}
+
+.drag-handle:hover { color: var(--steel); }
+
+/* ── Checkbox ── */
+.row-chk {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+/* ── Line number ── */
+.line-num {
+  font-size: 11px;
+  color: var(--steel-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Line content cell ── */
+.line-content {
+  cursor: text;
+  font-size: 13px;
+  color: var(--text);
+  padding-left: 12px !important;
+}
+
+.line-content.is-msg {
+  color: var(--white);
+  font-style: italic;
+}
+
+.line-content .comment-hash {
+  color: var(--steel-dim);
+  margin-right: 4px;
+}
+
+/* ── Inline editing ── */
+.line-content.in-edit {
+  padding: 0 !important;
+}
+
+.line-content input,
+.line-content textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 26px;
+  background: #0a1820;
+  border: 1px solid var(--green-dim);
+  border-radius: 2px;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 8px;
+  outline: none;
+  box-shadow: 0 0 8px var(--green-glow), inset 0 0 12px rgba(0,0,0,0.3);
+}
+
+.line-content input:focus,
+.line-content textarea:focus {
+  border-color: var(--green);
+}
+
+/* ═══ COMMAND BADGES ═══ */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s;
+}
+
+.badge:hover {
+  filter: brightness(1.2);
+}
+
+.badge-nav  { color: var(--badge-nav);  background: var(--badge-nav-bg);  border-color: var(--green-dim); }
+.badge-set  { color: var(--badge-set);  background: var(--badge-set-bg);  border-color: var(--amber-dim); }
+.badge-vis  { color: var(--badge-vis);  background: var(--badge-vis-bg);  border-color: var(--cyan-dim); }
+.badge-act  { color: var(--badge-act);  background: var(--badge-act-bg);  border-color: var(--pink-dim); }
+.badge-msg  { color: var(--badge-msg);  background: var(--badge-msg-bg);  border-color: var(--steel-dim); }
+.badge-comment { color: var(--steel-dim); background: transparent; border-color: var(--steel-dim); }
+
+.badge .b-cmd {
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge .b-val {
+  font-weight: 300;
+  opacity: 0.8;
+}
+
+/* ── Row actions ── */
+.row-acts {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+tr:hover .row-acts {
+  opacity: 1;
+}
+
+.row-act-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--steel);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.row-act-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+  background: var(--bg-surface);
+}
+
+.row-act-btn.expand-btn:hover { color: var(--green); border-color: var(--green-dim); }
+.row-act-btn.del-btn:hover    { color: var(--red);   border-color: #4a1a1a; }
+
+/* ═══ DETAIL PANEL (inline expand) ═══ */
+tr.detail-row {
+  height: auto !important;
+  background: var(--bg-panel) !important;
+}
+
+tr.detail-row td {
+  padding: 0 !important;
+}
+
+.detail-panel {
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--green-dim);
+  border-bottom: 1px solid var(--green-dim);
+  animation: detailSlideIn 0.2s ease-out;
+}
+
+@keyframes detailSlideIn {
+  from { opacity: 0; max-height: 0; }
+  to   { opacity: 1; max-height: 400px; }
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.detail-header .dh-line {
+  flex: 1;
+  height: 1px;
+  background: var(--green-dim);
+}
+
+.token-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.token-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  min-width: 160px;
+  max-width: 320px;
+  flex: 0 0 auto;
+  transition: border-color 0.15s;
+}
+
+.token-card:hover {
+  border-color: var(--border-hi);
+}
+
+.token-card .tc-label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin-bottom: 4px;
+}
+
+.token-card select,
+.token-card input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 3px 6px;
+  outline: none;
+  margin-top: 3px;
+}
+
+.token-card select:focus,
+.token-card input:focus {
+  border-color: var(--green-dim);
+  box-shadow: 0 0 4px var(--green-glow);
+}
+
+.token-card .tc-remove {
+  float: right;
+  cursor: pointer;
+  color: var(--steel-dim);
+  font-size: 14px;
+  line-height: 1;
+  margin-top: -2px;
+}
+
+.token-card .tc-remove:hover { color: var(--red); }
+
+.detail-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ═══ BATCH BAR ═══ */
+#batch-bar {
+  height: 0;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  transition: height 0.2s ease;
+}
+
+#batch-bar.vis {
+  height: var(--h-batch);
+}
+
+.bc {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--green);
+}
+
+.bsep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.bgrp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blbl {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.bi {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  outline: none;
+  width: 140px;
+}
+
+.bi:focus {
+  border-color: var(--green-dim);
+}
+
+/* ═══ STATUS BAR ═══ */
+#status {
+  height: var(--h-status);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--steel);
+}
+
+#status .st-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#status .dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: none;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+#status .dirty-dot.vis { display: inline-block; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; box-shadow: 0 0 6px var(--amber); }
+}
+
+#status .st-right {
+  margin-left: auto;
+  color: var(--text-dim);
+}
+
+/* ═══ TOAST ═══ */
+#toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-surface);
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 20px;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px var(--green-glow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 8000;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ═══ MODALS ═══ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(3px);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  width: 560px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.modal-overlay.open .modal {
+  transform: scale(1);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--steel);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.modal-close:hover { color: var(--text); }
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-body textarea {
+  width: 100%;
+  min-height: 180px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+}
+
+.modal-body textarea:focus {
+  border-color: var(--green-dim);
+  box-shadow: 0 0 6px var(--green-glow);
+}
+
+.modal-opts {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.modal-opts label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal-opts input[type="checkbox"] {
+  accent-color: var(--green);
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ═══ EMPTY STATE ═══ */
+#empty-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  color: var(--steel);
+  padding: 40px;
+  text-align: center;
+}
+
+#empty-state .es-icon {
+  font-size: 40px;
+  opacity: 0.3;
+  color: var(--green);
+}
+
+#empty-state .es-title {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+#empty-state .es-sub {
+  font-size: 12px;
+  color: var(--steel-dim);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ═══ KEYBOARD HINTS ═══ */
+kbd {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--steel);
+}
+
+/* ═══ Hidden file input ═══ */
+#file-input { display: none; }
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+tr.row-enter {
+  animation: rowSlideIn 0.2s ease-out;
+}
+
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 800px) {
+  .c-badges { width: 140px; }
+  .c-acts { width: 50px; }
+  #batch-bar { flex-wrap: wrap; height: auto !important; padding: 6px 12px; gap: 6px; }
+  #batch-bar.vis { height: auto; }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <div id="header">
+    <div id="wave-bars"></div>
+    <div id="header-title">
+      Milkwave Script Editor
+      <span>v1.0</span>
+    </div>
+    <div id="header-right">
+      <span id="hdr-file">No file loaded</span>
+    </div>
+  </div>
+
+  <!-- ═══ TOOLBAR ═══ -->
+  <div id="toolbar">
+    <button class="btn" id="btn-new" title="New script (Ctrl+N)">New</button>
+    <button class="btn" id="btn-open" title="Open file (Ctrl+O)">Open</button>
+    <button class="btn accent" id="btn-save" title="Save (Ctrl+S)">Save</button>
+    <button class="btn" id="btn-save-as" title="Save As (Ctrl+Shift+S)">Save As</button>
+    <div class="tb-sep"></div>
+    <button class="btn" id="btn-add" title="Add line (Enter on last row)">+ Line</button>
+    <button class="btn" id="btn-dup" title="Duplicate selected lines">Dup</button>
+    <button class="btn" id="btn-comment" title="Toggle comment (Ctrl+/)">Comment</button>
+    <button class="btn" id="btn-delay" title="Insert blank/delay line">Delay</button>
+    <div class="tb-sep"></div>
+    <button class="btn" id="btn-up" title="Move up (Alt+Up)">&#9650;</button>
+    <button class="btn" id="btn-down" title="Move down (Alt+Down)">&#9660;</button>
+    <div class="tb-sep"></div>
+    <button class="btn danger" id="btn-del" title="Delete selected (Del)">Del</button>
+    <div class="tb-sep"></div>
+    <button class="btn" id="btn-import" title="Import script text">Import</button>
+    <div class="tb-sep"></div>
+    <a href="guide.html" target="_blank" class="btn" id="btn-help" title="Open scripting guide">? Guide</a>
+  </div>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div id="content">
+    <div id="table-area">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th class="c-drag"></th>
+            <th class="c-chk"><input type="checkbox" id="chk-all" class="row-chk" title="Select all"></th>
+            <th class="c-idx">#</th>
+            <th class="c-line">LINE</th>
+            <th class="c-badges">COMMANDS</th>
+            <th class="c-acts"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty-state">
+        <div class="es-icon">&#9901;</div>
+        <div class="es-title">No Script Loaded</div>
+        <div class="es-sub">Open a Milkwave script file (.txt) or create a new one.<br>
+        Press <kbd>Ctrl+O</kbd> to open or <kbd>Ctrl+N</kbd> for a new script.</div>
+        <button class="btn accent" id="btn-empty-open">Open File</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BATCH BAR ═══ -->
+  <div id="batch-bar">
+    <span class="bc" id="bc-count">0 selected</span>
+    <div class="bsep"></div>
+    <div class="bgrp">
+      <span class="blbl">Prepend</span>
+      <input class="bi" id="b-prepend" placeholder="e.g. BPM=120">
+      <button class="btn" id="btn-b-prepend">Set</button>
+    </div>
+    <div class="bsep"></div>
+    <div class="bgrp">
+      <span class="blbl">Append</span>
+      <input class="bi" id="b-append" placeholder="e.g. STOP">
+      <button class="btn" id="btn-b-append">Set</button>
+    </div>
+    <div class="bsep"></div>
+    <button class="btn" id="btn-b-comment">Comment</button>
+    <button class="btn danger" id="btn-b-del">Delete</button>
+  </div>
+
+  <!-- ═══ STATUS BAR ═══ -->
+  <div id="status">
+    <div class="st-item">
+      <span id="st-lines">0 lines</span>
+    </div>
+    <div class="st-item">
+      <div class="dirty-dot" id="st-dirty"></div>
+      <span id="st-dirty-text"></span>
+    </div>
+    <div class="st-right" id="st-file"></div>
+  </div>
+</div>
+
+<!-- ═══ IMPORT MODAL ═══ -->
+<div class="modal-overlay" id="import-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <span>Import Script</span>
+      <button class="modal-close" id="import-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="import-text" placeholder="Paste script lines here..."></textarea>
+      <div class="modal-opts">
+        <label><input type="radio" name="import-mode" value="replace" checked> Replace all</label>
+        <label><input type="radio" name="import-mode" value="append"> Append to end</label>
+        <label><input type="radio" name="import-mode" value="insert"> Insert after selection</label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="import-cancel">Cancel</button>
+      <button class="btn accent" id="import-go">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast"></div>
+
+<!-- Hidden file input fallback -->
+<input type="file" id="file-input" accept=".txt,.script,.mws">
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   MILKWAVE SCRIPT EDITOR — Core Logic
+   ═══════════════════════════════════════════════════════════════ */
+
+// ── Constants ──
+const KNOWN_COMMANDS = new Set([
+  'NEXT','PREV','STYLE','FONT','SIZE','COLOR','BPM','BEATS','STOP',
+  'SEND','PRESET','RESET','CLEARSPRITES','CLEARTEXTS','CLEARPARAMS',
+  'MSG','TIME','FRAME','FPS','INTENSITY','SHIFT','VERSION','QUALITY',
+  'HUE','SATURATION','BRIGHTNESS','MEDIA_PLAY','MEDIA_STOP','LINE',
+  'EXEC','BTN','RAND','LOCK','PRESETINFO','SONGINFO','SOUNDINFO','FULLSCREEN',
+  'FILE'
+]);
+
+const CMD_NAV = new Set(['NEXT','PREV','PRESET','RAND','LOCK','LINE','BTN','PRESETINFO','SONGINFO','SOUNDINFO','FULLSCREEN','FILE']);
+const CMD_SET = new Set(['BPM','BEATS','TIME','FRAME','FPS','INTENSITY','SHIFT','VERSION','QUALITY','STOP','RESET','MEDIA_PLAY','MEDIA_STOP']);
+const CMD_VIS = new Set(['STYLE','FONT','SIZE','COLOR','HUE','SATURATION','BRIGHTNESS','MSG']);
+const CMD_ACT = new Set(['SEND','CLEARSPRITES','CLEARTEXTS','CLEARPARAMS','EXEC']);
+
+function cmdCategory(cmd) {
+  if (CMD_NAV.has(cmd)) return 'nav';
+  if (CMD_SET.has(cmd)) return 'set';
+  if (CMD_VIS.has(cmd)) return 'vis';
+  if (CMD_ACT.has(cmd)) return 'act';
+  return 'msg';
+}
+
+// ── State ──
+let lines = [];
+let selRows = new Set();
+let dirty = false;
+let fileHandle = null;
+let curFileName = '';
+let editCell = null;
+let expandedRow = -1;
+let dragIdx = -1;
+let toastTimer = null;
+
+// ── DOM refs ──
+const $tbody      = document.getElementById('tbody');
+const $tableArea  = document.getElementById('table-area');
+const $batchBar   = document.getElementById('batch-bar');
+const $emptyState = document.getElementById('empty-state');
+const $toast      = document.getElementById('toast');
+const $chkAll     = document.getElementById('chk-all');
+const $fileInput  = document.getElementById('file-input');
+
+// ═══ PARSER ═══
+
+function parseToken(raw) {
+  const s = raw.trim();
+  if (!s) return null;
+  const eq = s.indexOf('=');
+  const cmd = eq > 0 ? s.substring(0, eq).toUpperCase() : s.toUpperCase();
+  if (KNOWN_COMMANDS.has(cmd)) {
+    return {
+      type: 'command',
+      command: cmd,
+      value: eq > 0 ? s.substring(eq + 1) : '',
+      raw: s
+    };
+  }
+  // Also check if the entire trimmed string (no =) is a known command
+  if (KNOWN_COMMANDS.has(s.toUpperCase())) {
+    return {
+      type: 'command',
+      command: s.toUpperCase(),
+      value: '',
+      raw: s
+    };
+  }
+  return { type: 'message', command: null, value: s, raw: s };
+}
+
+function parseLine(raw, idx) {
+  const trimmed = raw.trim();
+  if (trimmed === '') {
+    return { index: idx, type: 'blank', raw: raw, tokens: [], enabled: true };
+  }
+  if (trimmed.startsWith('#')) {
+    return { index: idx, type: 'comment', raw: raw, tokens: [], enabled: false };
+  }
+  const parts = raw.split('|');
+  const tokens = parts.map(p => parseToken(p)).filter(Boolean);
+  return { index: idx, type: 'command', raw: raw, tokens: tokens, enabled: true };
+}
+
+function parseScript(text) {
+  const rawLines = text.split(/\r?\n/);
+  // Remove trailing empty line if present (artifact of trailing newline)
+  if (rawLines.length > 1 && rawLines[rawLines.length - 1] === '') {
+    rawLines.pop();
+  }
+  return rawLines.map((r, i) => parseLine(r, i));
+}
+
+function serializeLines() {
+  return lines.map(l => {
+    if (l.type === 'blank') return '';
+    if (l.type === 'comment') return l.raw;
+    // Reconstruct from tokens
+    return l.tokens.map(t => {
+      if (t.type === 'command') {
+        return t.value !== '' ? `${t.command}=${t.value}` : t.command;
+      }
+      return t.raw;
+    }).join('|');
+  }).join('\r\n') + '\r\n';
+}
+
+// ═══ RENDER ═══
+
+function reindex() {
+  let n = 0;
+  for (const l of lines) {
+    if (l.type !== 'blank') {
+      l.index = n++;
+    } else {
+      l.index = -1;
+    }
+  }
+}
+
+function renderBadges(tokens) {
+  if (!tokens || tokens.length === 0) return '';
+  return '<div class="badges">' + tokens.map(t => {
+    if (t.type === 'command') {
+      const cat = cmdCategory(t.command);
+      const val = t.value ? `<span class="b-val">${esc(truncate(t.value, 24))}</span>` : '';
+      return `<span class="badge badge-${cat}"><span class="b-cmd">${esc(t.command)}</span>${val ? '=' : ''}${val}</span>`;
+    }
+    return `<span class="badge badge-msg">${esc(truncate(t.raw, 30))}</span>`;
+  }).join('') + '</div>';
+}
+
+function renderRow(l, arrIdx) {
+  if (l.type === 'blank') {
+    return `<tr class="is-blank" data-arr="${arrIdx}">
+      <td colspan="6"><span class="delay-line"><span class="delay-label">delay</span></span></td>
+    </tr>`;
+  }
+
+  const isComment = l.type === 'comment';
+  const isSel = selRows.has(arrIdx);
+  const cls = [isComment ? 'is-comment' : '', isSel ? 'selected' : ''].filter(Boolean).join(' ');
+  const displayIdx = l.index >= 0 ? l.index + 1 : '';
+
+  let contentHtml;
+  if (isComment) {
+    const commentText = l.raw.trim().startsWith('#') ? l.raw.trim().substring(1).trim() : l.raw;
+    contentHtml = `<span class="comment-hash">#</span>${esc(commentText)}`;
+  } else {
+    const hasMsg = l.tokens.some(t => t.type === 'message');
+    contentHtml = esc(l.raw);
+  }
+
+  return `<tr class="${cls}" data-arr="${arrIdx}">
+    <td class="c-drag"><span class="drag-handle" draggable="true" data-arr="${arrIdx}">&#9776;</span></td>
+    <td class="c-chk"><input type="checkbox" class="row-chk" data-arr="${arrIdx}" ${isSel ? 'checked' : ''}></td>
+    <td class="c-idx"><span class="line-num">${displayIdx}</span></td>
+    <td class="c-line line-content" data-arr="${arrIdx}">${contentHtml}</td>
+    <td class="c-badges">${isComment ? '<span class="badge badge-comment"># comment</span>' : renderBadges(l.tokens)}</td>
+    <td class="c-acts"><div class="row-acts">
+      ${!isComment ? `<button class="row-act-btn expand-btn" data-arr="${arrIdx}" title="Expand tokens">&#9998;</button>` : ''}
+      <button class="row-act-btn del-btn" data-arr="${arrIdx}" title="Delete line">&times;</button>
+    </div></td>
+  </tr>`;
+}
+
+function renderDetailRow(arrIdx) {
+  const l = lines[arrIdx];
+  if (!l || l.type !== 'command') return '';
+
+  const cmdOptions = Array.from(KNOWN_COMMANDS).sort().map(c =>
+    `<option value="${c}">${c}</option>`
+  ).join('');
+
+  const cards = l.tokens.map((t, ti) => {
+    const isCmd = t.type === 'command';
+    const cat = isCmd ? cmdCategory(t.command) : 'msg';
+    return `<div class="token-card" data-ti="${ti}">
+      <span class="tc-remove" data-arr="${arrIdx}" data-ti="${ti}" title="Remove token">&times;</span>
+      <div class="tc-label">${isCmd ? 'COMMAND' : 'MESSAGE'}</div>
+      <select class="tc-type" data-arr="${arrIdx}" data-ti="${ti}">
+        <option value="__MSG__" ${!isCmd ? 'selected' : ''}>Message (text)</option>
+        ${Array.from(KNOWN_COMMANDS).sort().map(c =>
+          `<option value="${c}" ${isCmd && t.command === c ? 'selected' : ''}>${c}</option>`
+        ).join('')}
+      </select>
+      <div class="tc-label" style="margin-top:6px">${isCmd ? 'VALUE' : 'TEXT'}</div>
+      <input type="text" class="tc-val" data-arr="${arrIdx}" data-ti="${ti}" value="${esc(isCmd ? t.value : t.raw)}">
+    </div>`;
+  }).join('');
+
+  return `<tr class="detail-row" data-detail="${arrIdx}">
+    <td colspan="6">
+      <div class="detail-panel">
+        <div class="detail-header">
+          <span>Tokens — Line ${l.index + 1}</span>
+          <div class="dh-line"></div>
+        </div>
+        <div class="token-cards">${cards}</div>
+        <div class="detail-actions">
+          <button class="btn" data-add-token="${arrIdx}">+ Add Token</button>
+          <button class="btn accent" data-close-detail="${arrIdx}">Done</button>
+        </div>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function render() {
+  reindex();
+
+  if (lines.length === 0) {
+    $tbody.innerHTML = '';
+    $emptyState.style.display = 'flex';
+    $tableArea.querySelector('#tbl').style.display = 'none';
+  } else {
+    $emptyState.style.display = 'none';
+    $tableArea.querySelector('#tbl').style.display = '';
+    let html = '';
+    for (let i = 0; i < lines.length; i++) {
+      html += renderRow(lines[i], i);
+      if (expandedRow === i) {
+        html += renderDetailRow(i);
+      }
+    }
+    $tbody.innerHTML = html;
+  }
+
+  syncBatchBar();
+  syncStatus();
+  syncSelectAll();
+}
+
+// ═══ HELPERS ═══
+
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function truncate(s, n) {
+  return s && s.length > n ? s.substring(0, n) + '…' : (s || '');
+}
+
+function toast(msg) {
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $toast.classList.remove('show'), 2400);
+}
+
+function markDirty() {
+  dirty = true;
+  syncStatus();
+}
+
+function markClean() {
+  dirty = false;
+  syncStatus();
+}
+
+function syncStatus() {
+  document.getElementById('st-lines').textContent = `${lines.length} line${lines.length !== 1 ? 's' : ''}`;
+  const dirtyDot = document.getElementById('st-dirty');
+  const dirtyText = document.getElementById('st-dirty-text');
+  dirtyDot.classList.toggle('vis', dirty);
+  dirtyText.textContent = dirty ? 'Modified' : '';
+  document.getElementById('st-file').textContent = curFileName || '';
+  document.getElementById('hdr-file').textContent = curFileName || 'No file loaded';
+}
+
+function syncBatchBar() {
+  $batchBar.classList.toggle('vis', selRows.size > 0);
+  document.getElementById('bc-count').textContent = `${selRows.size} selected`;
+}
+
+function syncSelectAll() {
+  const total = lines.filter(l => l.type !== 'blank').length;
+  $chkAll.checked = total > 0 && selRows.size === lines.length;
+  $chkAll.indeterminate = selRows.size > 0 && selRows.size < lines.length;
+}
+
+function getArrIdx(el) {
+  const v = el.dataset.arr ?? el.closest('[data-arr]')?.dataset.arr;
+  return v != null ? parseInt(v) : -1;
+}
+
+// ═══ SELECTION ═══
+
+function toggleRow(idx, checked) {
+  if (checked) selRows.add(idx);
+  else selRows.delete(idx);
+  syncBatchBar();
+  syncSelectAll();
+  // Update visual
+  const tr = $tbody.querySelector(`tr[data-arr="${idx}"]`);
+  if (tr) tr.classList.toggle('selected', checked);
+  const chk = $tbody.querySelector(`.row-chk[data-arr="${idx}"]`);
+  if (chk) chk.checked = checked;
+}
+
+$chkAll.addEventListener('change', () => {
+  const c = $chkAll.checked;
+  selRows.clear();
+  if (c) lines.forEach((_, i) => selRows.add(i));
+  render();
+});
+
+// ═══ INLINE EDITING ═══
+
+function beginEdit(td, arrIdx) {
+  if (editCell) commitEdit(true);
+  const l = lines[arrIdx];
+  if (!l || l.type === 'blank') return;
+
+  editCell = { td, arrIdx, prev: l.raw };
+  const editVal = l.type === 'comment' ? l.raw : l.raw;
+
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = editVal;
+  inp.addEventListener('blur', () => commitEdit(true));
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      commitEdit(true);
+    } else if (ev.key === 'Escape') {
+      ev.preventDefault();
+      commitEdit(false);
+    }
+  });
+
+  td.classList.add('in-edit');
+  td.innerHTML = '';
+  td.appendChild(inp);
+  inp.focus();
+  inp.select();
+}
+
+function commitEdit(save) {
+  if (!editCell) return;
+  const { td, arrIdx, prev } = editCell;
+  editCell = null;
+
+  if (save) {
+    const inp = td.querySelector('input');
+    if (inp) {
+      const newRaw = inp.value;
+      if (newRaw !== prev) {
+        const newLine = parseLine(newRaw, lines[arrIdx].index);
+        lines[arrIdx] = newLine;
+        markDirty();
+      }
+    }
+  }
+
+  render();
+}
+
+// ═══ LINE OPERATIONS ═══
+
+function addLine(afterIdx) {
+  const insertAt = afterIdx >= 0 ? afterIdx + 1 : lines.length;
+  const newLine = parseLine('', insertAt);
+  newLine.type = 'command';
+  newLine.raw = '';
+  newLine.tokens = [];
+  lines.splice(insertAt, 0, newLine);
+  markDirty();
+  render();
+  // Start editing the new line
+  requestAnimationFrame(() => {
+    const td = $tbody.querySelector(`tr[data-arr="${insertAt}"] .line-content`);
+    if (td) beginEdit(td, insertAt);
+  });
+}
+
+function deleteLine(arrIdx) {
+  if (arrIdx < 0 || arrIdx >= lines.length) return;
+  lines.splice(arrIdx, 1);
+  selRows.delete(arrIdx);
+  // Adjust selection indices
+  const newSel = new Set();
+  selRows.forEach(i => {
+    if (i > arrIdx) newSel.add(i - 1);
+    else newSel.add(i);
+  });
+  selRows = newSel;
+  if (expandedRow === arrIdx) expandedRow = -1;
+  else if (expandedRow > arrIdx) expandedRow--;
+  markDirty();
+  render();
+}
+
+function duplicateLines() {
+  if (selRows.size === 0) return;
+  const indices = Array.from(selRows).sort((a, b) => a - b);
+  const lastIdx = indices[indices.length - 1];
+  const copies = indices.map(i => parseLine(lines[i].raw, 0));
+  lines.splice(lastIdx + 1, 0, ...copies);
+  selRows.clear();
+  copies.forEach((_, i) => selRows.add(lastIdx + 1 + i));
+  markDirty();
+  render();
+  toast(`Duplicated ${copies.length} line${copies.length > 1 ? 's' : ''}`);
+}
+
+function toggleComment() {
+  const targets = selRows.size > 0 ? Array.from(selRows) : [];
+  if (targets.length === 0) return;
+
+  targets.forEach(i => {
+    const l = lines[i];
+    if (l.type === 'blank') return;
+    if (l.type === 'comment') {
+      // Uncomment
+      const newRaw = l.raw.replace(/^(\s*)#\s?/, '$1');
+      lines[i] = parseLine(newRaw, l.index);
+    } else {
+      // Comment
+      lines[i] = { ...l, type: 'comment', raw: '# ' + l.raw, tokens: [], enabled: false };
+    }
+  });
+
+  markDirty();
+  render();
+  toast(`Toggled comment on ${targets.length} line${targets.length > 1 ? 's' : ''}`);
+}
+
+function insertDelay(afterIdx) {
+  const insertAt = afterIdx >= 0 ? afterIdx + 1 : lines.length;
+  lines.splice(insertAt, 0, { index: -1, type: 'blank', raw: '', tokens: [], enabled: true });
+  markDirty();
+  render();
+}
+
+function moveLines(direction) {
+  if (selRows.size === 0) return;
+  const indices = Array.from(selRows).sort((a, b) => a - b);
+
+  if (direction === -1 && indices[0] === 0) return;
+  if (direction === 1 && indices[indices.length - 1] === lines.length - 1) return;
+
+  if (direction === -1) {
+    for (const i of indices) {
+      [lines[i - 1], lines[i]] = [lines[i], lines[i - 1]];
+    }
+  } else {
+    for (const i of indices.reverse()) {
+      [lines[i + 1], lines[i]] = [lines[i], lines[i + 1]];
+    }
+  }
+
+  const newSel = new Set();
+  indices.forEach(i => newSel.add(i + direction));
+  selRows = newSel;
+  if (expandedRow >= 0) {
+    if (selRows.has(expandedRow - direction)) expandedRow += direction;
+  }
+  markDirty();
+  render();
+}
+
+// ═══ DETAIL PANEL (token editing) ═══
+
+function toggleDetail(arrIdx) {
+  if (expandedRow === arrIdx) {
+    expandedRow = -1;
+  } else {
+    expandedRow = arrIdx;
+  }
+  render();
+}
+
+function updateToken(arrIdx, tokenIdx, newCommand, newValue) {
+  const l = lines[arrIdx];
+  if (!l || !l.tokens[tokenIdx]) return;
+
+  if (newCommand === '__MSG__') {
+    l.tokens[tokenIdx] = { type: 'message', command: null, value: newValue, raw: newValue };
+  } else {
+    l.tokens[tokenIdx] = {
+      type: 'command',
+      command: newCommand,
+      value: newValue,
+      raw: newValue ? `${newCommand}=${newValue}` : newCommand
+    };
+  }
+
+  // Rebuild raw
+  l.raw = l.tokens.map(t => {
+    if (t.type === 'command') return t.value ? `${t.command}=${t.value}` : t.command;
+    return t.raw;
+  }).join('|');
+
+  markDirty();
+  render();
+}
+
+function removeToken(arrIdx, tokenIdx) {
+  const l = lines[arrIdx];
+  if (!l || !l.tokens[tokenIdx]) return;
+  l.tokens.splice(tokenIdx, 1);
+  l.raw = l.tokens.map(t => {
+    if (t.type === 'command') return t.value ? `${t.command}=${t.value}` : t.command;
+    return t.raw;
+  }).join('|');
+  markDirty();
+  render();
+}
+
+function addToken(arrIdx) {
+  const l = lines[arrIdx];
+  if (!l) return;
+  l.tokens.push({ type: 'message', command: null, value: 'text', raw: 'text' });
+  l.raw = l.tokens.map(t => {
+    if (t.type === 'command') return t.value ? `${t.command}=${t.value}` : t.command;
+    return t.raw;
+  }).join('|');
+  markDirty();
+  render();
+}
+
+// ═══ BATCH OPERATIONS ═══
+
+function batchPrepend() {
+  const val = document.getElementById('b-prepend').value.trim();
+  if (!val || selRows.size === 0) return;
+  selRows.forEach(i => {
+    const l = lines[i];
+    if (l.type === 'blank' || l.type === 'comment') return;
+    const newRaw = val + '|' + l.raw;
+    lines[i] = parseLine(newRaw, l.index);
+  });
+  markDirty();
+  render();
+  toast(`Prepended to ${selRows.size} lines`);
+}
+
+function batchAppend() {
+  const val = document.getElementById('b-append').value.trim();
+  if (!val || selRows.size === 0) return;
+  selRows.forEach(i => {
+    const l = lines[i];
+    if (l.type === 'blank' || l.type === 'comment') return;
+    const newRaw = l.raw + '|' + val;
+    lines[i] = parseLine(newRaw, l.index);
+  });
+  markDirty();
+  render();
+  toast(`Appended to ${selRows.size} lines`);
+}
+
+function batchComment() {
+  toggleComment();
+}
+
+function batchDelete() {
+  if (selRows.size === 0) return;
+  const count = selRows.size;
+  const indices = Array.from(selRows).sort((a, b) => b - a);
+  indices.forEach(i => lines.splice(i, 1));
+  selRows.clear();
+  expandedRow = -1;
+  markDirty();
+  render();
+  toast(`Deleted ${count} line${count > 1 ? 's' : ''}`);
+}
+
+// ═══ FILE I/O ═══
+
+function applyLoaded(text, name) {
+  lines = parseScript(text);
+  selRows.clear();
+  expandedRow = -1;
+  curFileName = name || '';
+  markClean();
+  render();
+  toast(`Loaded ${lines.length} lines`);
+}
+
+async function openFile() {
+  if (dirty && !confirm('You have unsaved changes. Open a new file anyway?')) return;
+
+  try {
+    if (window.showOpenFilePicker) {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'Milkwave Scripts', accept: { 'text/plain': ['.txt', '.script', '.mws'] } }],
+        multiple: false
+      });
+      fileHandle = handle;
+      const file = await handle.getFile();
+      const text = await file.text();
+      applyLoaded(text, file.name);
+    } else {
+      $fileInput.click();
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') console.error(e);
+  }
+}
+
+$fileInput.addEventListener('change', async () => {
+  const f = $fileInput.files[0];
+  if (!f) return;
+  const text = await f.text();
+  fileHandle = null;
+  applyLoaded(text, f.name);
+  $fileInput.value = '';
+});
+
+async function saveFile() {
+  const text = serializeLines();
+  try {
+    if (fileHandle) {
+      const w = await fileHandle.createWritable();
+      await w.write(text);
+      await w.close();
+      markClean();
+      toast('Saved');
+      return;
+    }
+    await saveAs(text);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error(e);
+      toast('Save failed');
+    }
+  }
+}
+
+async function saveAs(text) {
+  text = text || serializeLines();
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: curFileName || 'script.txt',
+        types: [{ description: 'Milkwave Scripts', accept: { 'text/plain': ['.txt'] } }]
+      });
+      fileHandle = handle;
+      const w = await handle.createWritable();
+      await w.write(text);
+      await w.close();
+      curFileName = handle.name;
+      markClean();
+      toast(`Saved as ${curFileName}`);
+    } else {
+      // Fallback: download
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = curFileName || 'script.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+      markClean();
+      toast('Downloaded');
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error(e);
+      toast('Save failed');
+    }
+  }
+}
+
+function newFile() {
+  if (dirty && !confirm('You have unsaved changes. Create a new file anyway?')) return;
+  fileHandle = null;
+  curFileName = '';
+  lines = [];
+  selRows.clear();
+  expandedRow = -1;
+  markClean();
+  render();
+  toast('New script');
+}
+
+// ═══ IMPORT ═══
+
+function importOpen() {
+  document.getElementById('import-overlay').classList.add('open');
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-text').focus();
+}
+
+function importClose() {
+  document.getElementById('import-overlay').classList.remove('open');
+}
+
+function importGo() {
+  const text = document.getElementById('import-text').value;
+  if (!text.trim()) { importClose(); return; }
+
+  const mode = document.querySelector('input[name="import-mode"]:checked').value;
+  const newLines = parseScript(text);
+
+  if (mode === 'replace') {
+    lines = newLines;
+    selRows.clear();
+    expandedRow = -1;
+  } else if (mode === 'append') {
+    lines.push(...newLines);
+  } else if (mode === 'insert') {
+    const afterIdx = selRows.size > 0 ? Math.max(...selRows) : lines.length - 1;
+    lines.splice(afterIdx + 1, 0, ...newLines);
+  }
+
+  markDirty();
+  render();
+  importClose();
+  toast(`Imported ${newLines.length} line${newLines.length > 1 ? 's' : ''}`);
+}
+
+// ═══ DRAG & DROP REORDER ═══
+
+let dragOverIdx = -1;
+
+function onDragStart(e) {
+  const handle = e.target.closest('.drag-handle');
+  if (!handle) return;
+  dragIdx = parseInt(handle.dataset.arr);
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(dragIdx));
+  // Style the dragged row
+  const tr = handle.closest('tr');
+  if (tr) tr.style.opacity = '0.4';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const tr = e.target.closest('tr[data-arr]');
+  if (tr) {
+    const idx = parseInt(tr.dataset.arr);
+    if (idx !== dragOverIdx) {
+      // Remove previous indicator
+      $tbody.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      tr.classList.add('drag-over');
+      dragOverIdx = idx;
+    }
+  }
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  $tbody.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const tr = e.target.closest('tr[data-arr]');
+  if (!tr || dragIdx < 0) return;
+  const dropIdx = parseInt(tr.dataset.arr);
+  if (dragIdx === dropIdx) return;
+
+  const [moved] = lines.splice(dragIdx, 1);
+  const insertAt = dropIdx > dragIdx ? dropIdx : dropIdx;
+  lines.splice(insertAt, 0, moved);
+
+  // Adjust selection
+  const newSel = new Set();
+  selRows.forEach(i => {
+    if (i === dragIdx) newSel.add(insertAt);
+    else if (dragIdx < dropIdx) {
+      newSel.add(i > dragIdx && i <= dropIdx ? i - 1 : i);
+    } else {
+      newSel.add(i >= dropIdx && i < dragIdx ? i + 1 : i);
+    }
+  });
+  selRows = newSel;
+  expandedRow = -1;
+  dragIdx = -1;
+  markDirty();
+  render();
+}
+
+function onDragEnd(e) {
+  dragIdx = -1;
+  dragOverIdx = -1;
+  $tbody.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  $tbody.querySelectorAll('tr').forEach(tr => tr.style.opacity = '');
+}
+
+$tbody.addEventListener('dragstart', onDragStart);
+$tbody.addEventListener('dragover', onDragOver);
+$tbody.addEventListener('drop', onDrop);
+$tbody.addEventListener('dragend', onDragEnd);
+
+// ═══ EVENT DELEGATION ═══
+
+$tbody.addEventListener('click', e => {
+  // Checkbox
+  const chk = e.target.closest('.row-chk');
+  if (chk) {
+    const idx = parseInt(chk.dataset.arr);
+    toggleRow(idx, chk.checked);
+    return;
+  }
+
+  // Expand button
+  const expBtn = e.target.closest('.expand-btn');
+  if (expBtn) {
+    toggleDetail(parseInt(expBtn.dataset.arr));
+    return;
+  }
+
+  // Delete button
+  const delBtn = e.target.closest('.del-btn');
+  if (delBtn) {
+    deleteLine(parseInt(delBtn.dataset.arr));
+    return;
+  }
+
+  // Token remove
+  const tcRemove = e.target.closest('.tc-remove');
+  if (tcRemove) {
+    removeToken(parseInt(tcRemove.dataset.arr), parseInt(tcRemove.dataset.ti));
+    return;
+  }
+
+  // Add token
+  const addTok = e.target.closest('[data-add-token]');
+  if (addTok) {
+    addToken(parseInt(addTok.dataset.addToken));
+    return;
+  }
+
+  // Close detail
+  const closeDet = e.target.closest('[data-close-detail]');
+  if (closeDet) {
+    expandedRow = -1;
+    render();
+    return;
+  }
+
+  // Line content (inline edit)
+  const lineCell = e.target.closest('.line-content');
+  if (lineCell && !lineCell.classList.contains('in-edit')) {
+    beginEdit(lineCell, parseInt(lineCell.dataset.arr));
+    return;
+  }
+});
+
+// Detail panel changes
+$tbody.addEventListener('change', e => {
+  const sel = e.target.closest('.tc-type');
+  if (sel) {
+    const arrIdx = parseInt(sel.dataset.arr);
+    const ti = parseInt(sel.dataset.ti);
+    const l = lines[arrIdx];
+    if (l && l.tokens[ti]) {
+      const valInput = sel.closest('.token-card').querySelector('.tc-val');
+      updateToken(arrIdx, ti, sel.value, valInput ? valInput.value : '');
+    }
+    return;
+  }
+});
+
+$tbody.addEventListener('input', e => {
+  const valInp = e.target.closest('.tc-val');
+  if (valInp) {
+    const arrIdx = parseInt(valInp.dataset.arr);
+    const ti = parseInt(valInp.dataset.ti);
+    const l = lines[arrIdx];
+    if (l && l.tokens[ti]) {
+      const typeSel = valInp.closest('.token-card').querySelector('.tc-type');
+      updateToken(arrIdx, ti, typeSel ? typeSel.value : '__MSG__', valInp.value);
+    }
+    return;
+  }
+});
+
+// ═══ TOOLBAR BUTTONS ═══
+
+document.getElementById('btn-new').addEventListener('click', newFile);
+document.getElementById('btn-open').addEventListener('click', openFile);
+document.getElementById('btn-empty-open').addEventListener('click', openFile);
+document.getElementById('btn-save').addEventListener('click', saveFile);
+document.getElementById('btn-save-as').addEventListener('click', () => saveAs());
+document.getElementById('btn-add').addEventListener('click', () => {
+  const last = selRows.size > 0 ? Math.max(...selRows) : lines.length - 1;
+  addLine(last);
+});
+document.getElementById('btn-dup').addEventListener('click', duplicateLines);
+document.getElementById('btn-comment').addEventListener('click', toggleComment);
+document.getElementById('btn-delay').addEventListener('click', () => {
+  const last = selRows.size > 0 ? Math.max(...selRows) : lines.length - 1;
+  insertDelay(last);
+});
+document.getElementById('btn-up').addEventListener('click', () => moveLines(-1));
+document.getElementById('btn-down').addEventListener('click', () => moveLines(1));
+document.getElementById('btn-del').addEventListener('click', () => {
+  if (selRows.size > 0) batchDelete();
+});
+document.getElementById('btn-import').addEventListener('click', importOpen);
+
+// Batch
+document.getElementById('btn-b-prepend').addEventListener('click', batchPrepend);
+document.getElementById('btn-b-append').addEventListener('click', batchAppend);
+document.getElementById('btn-b-comment').addEventListener('click', batchComment);
+document.getElementById('btn-b-del').addEventListener('click', batchDelete);
+
+// Import modal
+document.getElementById('import-close').addEventListener('click', importClose);
+document.getElementById('import-cancel').addEventListener('click', importClose);
+document.getElementById('import-go').addEventListener('click', importGo);
+document.getElementById('import-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('import-overlay')) importClose();
+});
+
+// ═══ KEYBOARD SHORTCUTS ═══
+
+document.addEventListener('keydown', e => {
+  // Don't intercept when editing
+  const isEditing = editCell || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+
+  if (e.ctrlKey && e.key === 'n') { e.preventDefault(); newFile(); return; }
+  if (e.ctrlKey && e.key === 'o') { e.preventDefault(); openFile(); return; }
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    if (e.shiftKey) saveAs();
+    else saveFile();
+    return;
+  }
+  if (e.ctrlKey && e.key === '/') { e.preventDefault(); toggleComment(); return; }
+
+  if (isEditing) return;
+
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selRows.size > 0) { e.preventDefault(); batchDelete(); }
+    return;
+  }
+  if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); moveLines(-1); return; }
+  if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); moveLines(1); return; }
+  if (e.key === 'Escape') {
+    if (document.getElementById('import-overlay').classList.contains('open')) {
+      importClose();
+    } else if (expandedRow >= 0) {
+      expandedRow = -1;
+      render();
+    }
+  }
+});
+
+// ═══ BEFORE UNLOAD ═══
+
+window.addEventListener('beforeunload', e => {
+  if (dirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// ═══ HEADER WAVE BARS ═══
+
+(function initWaveBars() {
+  const container = document.getElementById('wave-bars');
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.gap = '2px';
+  container.style.marginRight = '10px';
+  container.style.height = '100%';
+  container.style.paddingTop = '14px';
+  container.style.paddingBottom = '14px';
+
+  for (let i = 0; i < 18; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'wave-bar';
+    const dur = 0.6 + Math.random() * 1.2;
+    const maxH = 8 + Math.random() * 18;
+    const delay = Math.random() * -2;
+    bar.style.setProperty('--dur', dur + 's');
+    bar.style.setProperty('--max-h', maxH + 'px');
+    bar.style.animationDelay = delay + 's';
+    container.appendChild(bar);
+  }
+})();
+
+// ═══ INIT ═══
+
+render();
+
+</script>
+</body>
+</html>

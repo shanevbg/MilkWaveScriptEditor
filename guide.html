@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milkwave Script Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Anybody:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #080b0e;
+  --bg-panel:    #0c1014;
+  --bg-surface:  #101820;
+  --border:      #1a2a34;
+  --border-hi:   #2a4050;
+  --green:       #39ff7f;
+  --green-dim:   #1a7a3e;
+  --green-glow:  #39ff7f44;
+  --amber:       #ffb347;
+  --amber-dim:   #7a5520;
+  --cyan:        #47d4ff;
+  --cyan-dim:    #1a5a70;
+  --pink:        #ff6b9d;
+  --pink-dim:    #7a2a4a;
+  --red:         #ff4757;
+  --steel:       #5a7a8a;
+  --text:        #c8d8e0;
+  --text-dim:    #5a7080;
+  --text-bright: #e8f0f4;
+  --white:       #e0e8ec;
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+  --font-head: 'Anybody', 'IBM Plex Mono', sans-serif;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ── Scanline overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+}
+
+/* ── CRT vignette ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%);
+}
+
+/* ═══ HEADER ═══ */
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0 12px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green) 20%, var(--green) 80%, transparent);
+  opacity: 0.4;
+}
+
+.page-title {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+  text-shadow: 0 0 12px var(--green-glow);
+}
+
+.page-title span {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-left: 8px;
+}
+
+.back-link {
+  font-size: 11px;
+  color: var(--steel);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+
+.back-link:hover {
+  color: var(--green);
+  border-color: var(--green-dim);
+  background: var(--bg-surface);
+}
+
+/* ═══ TABLE OF CONTENTS ═══ */
+.toc {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 16px 20px;
+  margin-bottom: 36px;
+}
+
+.toc-title {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 10px;
+}
+
+.toc ol {
+  list-style: none;
+  counter-reset: toc;
+  columns: 2;
+  column-gap: 24px;
+}
+
+.toc li {
+  counter-increment: toc;
+  margin-bottom: 4px;
+}
+
+.toc li::before {
+  content: counter(toc, decimal-leading-zero) " ";
+  color: var(--steel-dim, #3a4a54);
+  font-size: 10px;
+}
+
+.toc a {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 12px;
+  transition: color 0.15s;
+}
+
+.toc a:hover {
+  color: var(--green);
+}
+
+/* ═══ SECTIONS ═══ */
+h2 {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-top: 48px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--green-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+h2 .h-num {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--steel);
+  letter-spacing: 1px;
+  font-family: var(--font-mono);
+}
+
+h3 {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-top: 28px;
+  margin-bottom: 10px;
+}
+
+h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan);
+  margin-top: 20px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+p {
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+strong { color: var(--text-bright); }
+em { color: var(--amber); font-style: normal; }
+
+/* ═══ CODE ═══ */
+code {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--green);
+}
+
+pre {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin: 12px 0 16px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* ── Syntax highlighting in pre ── */
+.cmd { color: var(--green); font-weight: 500; }
+.val { color: var(--amber); }
+.msg { color: var(--white); font-style: italic; }
+.cmt { color: var(--steel-dim, #3a4a54); }
+.sep { color: var(--steel); }
+.key { color: var(--cyan); }
+
+/* ═══ TABLES ═══ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 20px;
+  font-size: 12px;
+}
+
+thead th {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--green-dim);
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--steel);
+  white-space: nowrap;
+  position: sticky;
+  top: 50px;
+  z-index: 5;
+}
+
+td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #0e1418;
+  vertical-align: top;
+}
+
+tr:hover td {
+  background: var(--bg-surface);
+}
+
+td:first-child {
+  white-space: nowrap;
+}
+
+td code {
+  font-size: 11px;
+}
+
+/* ── Category badges ── */
+.cat-nav  { color: var(--green); }
+.cat-set  { color: var(--amber); }
+.cat-vis  { color: var(--cyan); }
+.cat-act  { color: var(--pink); }
+.cat-tog  { color: #b8a9ff; }
+.cat-scr  { color: #ff9f43; }
+
+.badge-sm {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+
+.badge-nav  { color: var(--green);  border-color: var(--green-dim);  background: #39ff7f10; }
+.badge-set  { color: var(--amber);  border-color: var(--amber-dim);  background: #ffb34710; }
+.badge-vis  { color: var(--cyan);   border-color: var(--cyan-dim);   background: #47d4ff10; }
+.badge-act  { color: var(--pink);   border-color: var(--pink-dim);   background: #ff6b9d10; }
+.badge-tog  { color: #b8a9ff;       border-color: #5a4a7a;           background: #b8a9ff10; }
+.badge-scr  { color: #ff9f43;       border-color: #7a4a1a;           background: #ff9f4310; }
+.badge-req  { color: var(--red);    border-color: #4a1a1a;           background: #ff475710; }
+
+/* ═══ LISTS ═══ */
+ul, ol {
+  margin: 8px 0 14px 20px;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+li code {
+  font-size: 11px;
+}
+
+/* ═══ CALLOUT BOXES ═══ */
+.callout {
+  border-left: 3px solid;
+  padding: 10px 14px;
+  margin: 14px 0;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+}
+
+.callout-tip {
+  border-color: var(--green);
+  background: #39ff7f08;
+}
+
+.callout-tip .callout-label { color: var(--green); }
+
+.callout-warn {
+  border-color: var(--amber);
+  background: #ffb34708;
+}
+
+.callout-warn .callout-label { color: var(--amber); }
+
+.callout-note {
+  border-color: var(--cyan);
+  background: #47d4ff08;
+}
+
+.callout-note .callout-label { color: var(--cyan); }
+
+.callout-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* ═══ HORIZONTAL RULE ═══ */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 32px 0;
+}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar { width: 7px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #3a4a54; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--steel); }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 700px) {
+  .toc ol { columns: 1; }
+  table { font-size: 11px; }
+  td, th { padding: 4px 6px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="page-header">
+  <div class="page-title">Milkwave Script Guide <span>v1.0</span></div>
+  <a href="editor.html" class="back-link">Back to Editor</a>
+</div>
+
+<!-- ═══ TABLE OF CONTENTS ═══ -->
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#file-format">File Format</a></li>
+    <li><a href="#autoplay">Autoplay &amp; Timing</a></li>
+    <li><a href="#commands">Command Reference</a></li>
+    <li><a href="#messages">Messages &amp; Text</a></li>
+    <li><a href="#msg-command">MSG= Raw Command</a></li>
+    <li><a href="#msg-params">MSG Parameters</a></li>
+    <li><a href="#styles">Styles</a></li>
+    <li><a href="#presets">Presets</a></li>
+    <li><a href="#send">SEND &amp; Sprites</a></li>
+    <li><a href="#settings">Settings Commands</a></li>
+    <li><a href="#examples">Examples</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     1. OVERVIEW
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="overview"><span class="h-num">01</span> Overview</h2>
+
+<p>The Milkwave scripting system lets you automate the <strong>Milkwave Remote</strong>, which controls the <strong>Milkwave Visualizer</strong> (a MilkDrop-based music visualizer). Scripts are plain text files containing lines of commands that are executed sequentially or on-demand.</p>
+
+<p>With scripts you can:</p>
+<ul>
+  <li>Send text messages that appear as animated overlays on the visualizer</li>
+  <li>Switch presets, change fonts, colors, and styles</li>
+  <li>Control playback timing with BPM-synced autoplay</li>
+  <li>Trigger sprites and keycodes</li>
+  <li>Adjust rendering settings (intensity, hue, quality, etc.)</li>
+  <li>Run external programs</li>
+  <li>Chain any combination of the above on a single line</li>
+</ul>
+
+<p>The default script file is <code>script-default.txt</code> in the Milkwave base directory. You can load other files by right-clicking the <em>"From File"</em> label on the <em>Message</em> tab in the Remote window.</p>
+
+<!-- ═══════════════════════════════════════════════════════════
+     2. FILE FORMAT
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="file-format"><span class="h-num">02</span> File Format</h2>
+
+<p>Script files are plain text (<code>.txt</code>) with one instruction per line:</p>
+
+<pre><code><span class="cmt"># Lines starting with # are comments (ignored by the parser)</span>
+<span class="cmt"># Blank lines create delays in autoplay</span>
+
+<span class="cmd">BPM</span><span class="sep">=</span><span class="val">120</span><span class="sep">|</span><span class="cmd">BEATS</span><span class="sep">=</span><span class="val">8</span><span class="sep">|</span><span class="cmd">STYLE</span><span class="sep">=</span><span class="val">Style A</span><span class="sep">|</span><span class="msg">Welcome to Milkwave!</span>
+<span class="cmd">NEXT</span>
+<span class="msg">This text is sent as a message</span>
+
+<span class="cmd">SIZE</span><span class="sep">=</span><span class="val">60</span><span class="sep">|</span><span class="msg">BOOM</span>
+<span class="cmd">STOP</span></code></pre>
+
+<h3>Rules</h3>
+<ul>
+  <li><strong>Comments</strong> &mdash; lines starting with <code>#</code> are ignored</li>
+  <li><strong>Blank lines</strong> &mdash; create one beat-interval delay during autoplay</li>
+  <li><strong>Pipe separator</strong> &mdash; use <code>|</code> to chain multiple commands on one line</li>
+  <li><strong>Plain text</strong> &mdash; anything that isn't a recognized command is sent as a message to the visualizer</li>
+  <li><strong>Case</strong> &mdash; command names are case-insensitive (<code>BPM</code>, <code>bpm</code>, <code>Bpm</code> all work)</li>
+</ul>
+
+<div class="callout callout-tip">
+  <div class="callout-label">Tip</div>
+  All commands on a line are executed together in sequence, with no delay between them. Use blank lines to create timing gaps.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3. AUTOPLAY & TIMING
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="autoplay"><span class="h-num">03</span> Autoplay &amp; Timing</h2>
+
+<p>When <em>Autoplay</em> is enabled in the Remote, lines execute automatically based on BPM and Beats.</p>
+
+<h3>Timing Formula</h3>
+<pre><code>beat_interval = (60 / BPM) seconds
+line_interval = beat_interval &times; BEATS
+
+Example: BPM=120, BEATS=8
+  beat = 60/120 = 0.5s
+  line = 0.5 &times; 8 = 4.0 seconds between lines</code></pre>
+
+<h3>Behavior</h3>
+<ul>
+  <li>After the last line, autoplay wraps to the first line (unless <code>STOP</code> or random mode)</li>
+  <li>Blank lines consume one full line interval (delay)</li>
+  <li>Comment lines are skipped entirely (no delay)</li>
+  <li>The <code>RAND</code> toggle sends a random line each interval instead of sequential</li>
+  <li><code>BPM</code> supports fractional values (e.g., <code>BPM=98.5</code>)</li>
+</ul>
+
+<div class="callout callout-note">
+  <div class="callout-label">Note</div>
+  The timer may drift over time depending on BPM, beats, and system performance. Use the <code>RESET</code> command to re-sync, or double-click the "BPM" label in the Remote window.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     4. COMMAND REFERENCE
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="commands"><span class="h-num">04</span> Command Reference</h2>
+
+<p>All recognized commands. Commands are case-insensitive. Unrecognized text is sent as a message.</p>
+
+<h3>Navigation &amp; Presets</h3>
+<table>
+  <thead><tr><th>Command</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code class="cat-nav">NEXT</code></td><td>Load next preset (equivalent to pressing Space in the Visualizer)</td></tr>
+    <tr><td><code class="cat-nav">PREV</code></td><td>Load previous preset (equivalent to pressing Backspace)</td></tr>
+    <tr><td><code class="cat-nav">PRESET=<em>path</em></code></td><td>Load a specific <code>.milk</code> preset file. Path can be absolute (<code>C:\Path\To\preset.milk</code>) or relative to the Milkwave base directory</td></tr>
+    <tr><td><code class="cat-nav">RAND</code></td><td>Toggle random preset order</td></tr>
+    <tr><td><code class="cat-nav">LOCK</code></td><td>Toggle preset locking (prevents automatic preset changes)</td></tr>
+    <tr><td><code class="cat-nav">BTN=<em>n</em></code></td><td>Press button <em>n</em> (1&ndash;45) on the preset panel in "Preset" mode</td></tr>
+  </tbody>
+</table>
+
+<h3>Script Flow</h3>
+<table>
+  <thead><tr><th>Command</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code class="cat-set">BPM=<em>n</em></code></td><td>Set beats per minute (supports decimals, e.g. <code>98.5</code>)</td></tr>
+    <tr><td><code class="cat-set">BEATS=<em>n</em></code></td><td>Set beats per line (integer)</td></tr>
+    <tr><td><code class="cat-set">STOP</code></td><td>Stop autoplay</td></tr>
+    <tr><td><code class="cat-set">RESET</code></td><td>Reset the Remote timer to re-sync BPM timing</td></tr>
+    <tr><td><code class="cat-scr">LINE=<em>n</em></code></td><td>Jump to line <em>n</em> and execute it immediately (1-based, comments not counted)</td></tr>
+    <tr><td><code class="cat-scr">LINE=CURR</code></td><td>Re-run the currently selected autoplay line</td></tr>
+    <tr><td><code class="cat-scr">LINE=NEXT</code></td><td>Jump to the next autoplay line and run it</td></tr>
+    <tr><td><code class="cat-scr">LINE=PREV</code></td><td>Jump to the previous autoplay line and run it</td></tr>
+    <tr><td><code class="cat-scr">FILE=<em>path</em></code></td><td>Load a different script file and switch to it</td></tr>
+  </tbody>
+</table>
+
+<h3>Message Appearance</h3>
+<table>
+  <thead><tr><th>Command</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code class="cat-vis">STYLE=<em>name</em></code></td><td>Switch to a saved messenger style (configured in Remote)</td></tr>
+    <tr><td><code class="cat-vis">FONT=<em>name</em></code></td><td>Set font face (e.g. <code>FONT=Courier New</code>)</td></tr>
+    <tr><td><code class="cat-vis">SIZE=<em>n</em></code></td><td>Set font size in the Remote (float)</td></tr>
+    <tr><td><code class="cat-vis">COLOR=<em>R,G,B</em></code></td><td>Set message color as RGB values 0&ndash;255 (e.g. <code>COLOR=255,102,0</code>)</td></tr>
+    <tr><td><code class="cat-vis">MSG=<em>params</em></code></td><td>Send a raw message with full parameter control. <a href="#msg-command">See MSG= section</a></td></tr>
+  </tbody>
+</table>
+
+<h3>Rendering Settings</h3>
+<table>
+  <thead><tr><th>Command</th><th>Tab</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code class="cat-set">TIME=<em>n</em></code></td><td>Settings</td><td>Set time factor (e.g. <code>1.2</code>)</td></tr>
+    <tr><td><code class="cat-set">FRAME=<em>n</em></code></td><td>Settings</td><td>Set frame factor (e.g. <code>1.5</code>)</td></tr>
+    <tr><td><code class="cat-set">FPS=<em>n</em></code></td><td>Settings</td><td>Set FPS factor (e.g. <code>0.1</code>)</td></tr>
+    <tr><td><code class="cat-set">INTENSITY=<em>n</em></code></td><td>Settings</td><td>Set vis_intensity (e.g. <code>1.2</code>)</td></tr>
+    <tr><td><code class="cat-set">SHIFT=<em>n</em></code></td><td>Settings</td><td>Set vis_shift (e.g. <code>-0.2</code>)</td></tr>
+    <tr><td><code class="cat-set">VERSION=<em>n</em></code></td><td>Settings</td><td>Set vis_version (integer, e.g. <code>2</code>)</td></tr>
+    <tr><td><code class="cat-set">QUALITY=<em>n</em></code></td><td>Settings</td><td>Set render quality/pixelization (e.g. <code>0.5</code>)</td></tr>
+    <tr><td><code class="cat-vis">HUE=<em>n</em></code></td><td>Settings</td><td>Shift hue (e.g. <code>-0.8</code>)</td></tr>
+    <tr><td><code class="cat-vis">SATURATION=<em>n</em></code></td><td>Settings</td><td>Shift saturation (e.g. <code>0.77</code>)</td></tr>
+    <tr><td><code class="cat-vis">BRIGHTNESS=<em>n</em></code></td><td>Settings</td><td>Shift brightness (e.g. <code>0.1</code>)</td></tr>
+  </tbody>
+</table>
+
+<h3>Actions</h3>
+<table>
+  <thead><tr><th>Command</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code class="cat-act">SEND=<em>value</em></code></td><td>Send string to Visualizer. <a href="#send">See SEND section</a></td></tr>
+    <tr><td><code class="cat-act">CLEARSPRITES</code></td><td>Clear all sprites from the visualizer</td></tr>
+    <tr><td><code class="cat-act">CLEARTEXTS</code></td><td>Clear all text overlays from the visualizer</td></tr>
+    <tr><td><code class="cat-act">CLEARPARAMS</code></td><td>Clear the style/parameters definition in Remote</td></tr>
+    <tr><td><code class="cat-act">EXEC=<em>path</em></code></td><td>Open/run an external program or script (e.g. <code>EXEC=C:\Tools\script.bat</code>)</td></tr>
+    <tr><td><code class="cat-act">MEDIA_PLAY</code></td><td>Press the system Media Play/Pause key</td></tr>
+    <tr><td><code class="cat-act">MEDIA_STOP</code></td><td>Press the system Media Stop key</td></tr>
+  </tbody>
+</table>
+
+<h3>Toggles</h3>
+<table>
+  <thead><tr><th>Command</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code class="cat-tog">PRESETINFO</code></td><td>Toggle preset info display (F4 key)</td></tr>
+    <tr><td><code class="cat-tog">SONGINFO</code></td><td>Toggle song info display</td></tr>
+    <tr><td><code class="cat-tog">SOUNDINFO</code></td><td>Toggle sound info display</td></tr>
+    <tr><td><code class="cat-tog">FULLSCREEN</code></td><td>Toggle fullscreen (Alt+Enter)</td></tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════
+     5. MESSAGES & TEXT
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="messages"><span class="h-num">05</span> Messages &amp; Text</h2>
+
+<p>Any text on a command line that isn't a recognized command is sent as a <strong>message</strong> to the visualizer, where it appears as an animated text overlay.</p>
+
+<pre><code><span class="msg">Hello World!</span>
+<span class="cmd">FONT</span><span class="sep">=</span><span class="val">Courier New</span><span class="sep">|</span><span class="msg">This text uses Courier</span>
+<span class="cmd">COLOR</span><span class="sep">=</span><span class="val">255,0,0</span><span class="sep">|</span><span class="cmd">SIZE</span><span class="sep">=</span><span class="val">40</span><span class="sep">|</span><span class="msg">Big red text!</span></code></pre>
+
+<h3>How Messages Are Sent</h3>
+<p>When a plain message is sent, the Remote <strong>automatically appends</strong> the current UI settings:</p>
+<ul>
+  <li><code>font=</code> &mdash; current font face</li>
+  <li><code>size=</code> &mdash; current font size</li>
+  <li><code>r=</code>, <code>g=</code>, <code>b=</code> &mdash; current color</li>
+  <li>The current <strong>style parameters</strong> (if a style is selected)</li>
+</ul>
+
+<p>This means commands like <code>FONT=</code>, <code>SIZE=</code>, and <code>COLOR=</code> set the <em>defaults</em> that get applied to subsequent messages on the same or following lines.</p>
+
+<h3>Line Breaks</h3>
+<p>Use <code>//</code> within message text to create a line break:</p>
+<pre><code><span class="msg">First line//Second line</span></code></pre>
+
+<h3>Auto-Wrap</h3>
+<p>If the <em>Wrap</em> option is enabled in the Remote, long messages are automatically split at the nearest word boundary using <code>//</code>.</p>
+
+<div class="callout callout-warn">
+  <div class="callout-label">Limit</div>
+  Message text is truncated to <strong>500 characters</strong> maximum.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     6. MSG= RAW COMMAND
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="msg-command"><span class="h-num">06</span> MSG= Raw Command</h2>
+
+<p>The <code>MSG=</code> command sends a message with <strong>full control</strong> over every parameter. Parameters are separated by semicolons (<code>;</code>):</p>
+
+<pre><code><span class="cmd">MSG</span><span class="sep">=</span><span class="key">time</span><span class="sep">=</span><span class="val">5.0</span><span class="sep">;</span><span class="key">growth</span><span class="sep">=</span><span class="val">1.5</span><span class="sep">;</span><span class="key">text</span><span class="sep">=</span><span class="val">This is the message</span></code></pre>
+
+<p>Unlike plain messages, <code>MSG=</code> bypasses the default style &mdash; only the <code>font</code>, <code>size</code>, and <code>r/g/b</code> defaults are appended if not specified in the parameters.</p>
+
+<h3>Animated Movement</h3>
+<p>Use <code>startx</code>/<code>starty</code> with <code>movetime</code> to animate text from one position to another:</p>
+
+<pre><code><span class="cmt"># Slide in from upper-left to center</span>
+<span class="cmd">MSG</span><span class="sep">=</span><span class="key">startx</span><span class="sep">=</span><span class="val">0</span><span class="sep">;</span><span class="key">starty</span><span class="sep">=</span><span class="val">0</span><span class="sep">;</span><span class="key">x</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">y</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">movetime</span><span class="sep">=</span><span class="val">1.0</span><span class="sep">;</span><span class="key">text</span><span class="sep">=</span><span class="val">Hello!</span>
+
+<span class="cmt"># Slide in from right with easing</span>
+<span class="cmd">MSG</span><span class="sep">=</span><span class="key">startx</span><span class="sep">=</span><span class="val">1</span><span class="sep">;</span><span class="key">starty</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">y</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">movetime</span><span class="sep">=</span><span class="val">1.0</span><span class="sep">;</span><span class="key">easemode</span><span class="sep">=</span><span class="val">1</span><span class="sep">;</span><span class="key">text</span><span class="sep">=</span><span class="val">Eased in</span></code></pre>
+
+<h3>Background Box</h3>
+<p>Messages can have a colored background box:</p>
+
+<pre><code><span class="cmd">MSG</span><span class="sep">=</span><span class="key">box_alpha</span><span class="sep">=</span><span class="val">0.7</span><span class="sep">;</span><span class="key">box_col</span><span class="sep">=</span><span class="val">0,0,0</span><span class="sep">;</span><span class="key">box_left</span><span class="sep">=</span><span class="val">0.1</span><span class="sep">;</span><span class="key">box_right</span><span class="sep">=</span><span class="val">0.9</span><span class="sep">;</span><span class="key">box_top</span><span class="sep">=</span><span class="val">0.4</span><span class="sep">;</span><span class="key">box_bottom</span><span class="sep">=</span><span class="val">0.6</span><span class="sep">;</span><span class="key">text</span><span class="sep">=</span><span class="val">Boxed text</span></code></pre>
+
+<!-- ═══════════════════════════════════════════════════════════
+     7. MSG PARAMETERS
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="msg-params"><span class="h-num">07</span> MSG Parameters</h2>
+
+<p>Complete list of parameters accepted by the <code>MSG=</code> command and the visualizer's message rendering engine.</p>
+
+<h3>Text &amp; Font</h3>
+<table>
+  <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>text</code> <span class="badge-sm badge-req">required</span></td><td>string</td><td>&mdash;</td><td>The message text. Use <code>//</code> for line breaks</td></tr>
+    <tr><td><code>font</code></td><td>string</td><td>Segoe UI</td><td>Font face name (e.g. <code>Courier New</code>)</td></tr>
+    <tr><td><code>size</code></td><td>float</td><td>30.0</td><td>Font size in pixels</td></tr>
+    <tr><td><code>bold</code></td><td>int</td><td>0</td><td>Bold text (0 = off, 1 = on)</td></tr>
+    <tr><td><code>ital</code></td><td>int</td><td>0</td><td>Italic text (0 = off, 1 = on)</td></tr>
+  </tbody>
+</table>
+
+<h3>Position &amp; Animation</h3>
+<table>
+  <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>x</code></td><td>float</td><td>0.49</td><td>Target X position (0.0 = left, 1.0 = right)</td></tr>
+    <tr><td><code>y</code></td><td>float</td><td>0.5</td><td>Target Y position (0.0 = top, 1.0 = bottom)</td></tr>
+    <tr><td><code>randx</code></td><td>float</td><td>0</td><td>Random offset added to X (&plusmn; range)</td></tr>
+    <tr><td><code>randy</code></td><td>float</td><td>0</td><td>Random offset added to Y (&plusmn; range)</td></tr>
+    <tr><td><code>startx</code></td><td>float</td><td>&mdash;</td><td>Starting X position for animation</td></tr>
+    <tr><td><code>starty</code></td><td>float</td><td>&mdash;</td><td>Starting Y position for animation</td></tr>
+    <tr><td><code>movetime</code></td><td>float</td><td>&mdash;</td><td>Duration of move animation (seconds)</td></tr>
+    <tr><td><code>easemode</code></td><td>int</td><td>2</td><td>Easing type for movement animation</td></tr>
+    <tr><td><code>easefactor</code></td><td>float</td><td>2.0</td><td>Easing strength/curve factor</td></tr>
+    <tr><td><code>growth</code></td><td>float</td><td>1.0</td><td>Text scale factor over time (1.0 = no change, &gt;1 = grow, &lt;1 = shrink)</td></tr>
+  </tbody>
+</table>
+
+<h3>Timing</h3>
+<table>
+  <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>time</code></td><td>float</td><td>5.0</td><td>Total display duration (seconds)</td></tr>
+    <tr><td><code>fade</code></td><td>float</td><td>0.2</td><td>Fade-in time (seconds)</td></tr>
+    <tr><td><code>fadeout</code></td><td>float</td><td>0.0</td><td>Fade-out time (seconds)</td></tr>
+    <tr><td><code>burntime</code></td><td>float</td><td>0.1</td><td>Burn-in effect &mdash; how long the text "brands" into the visualization after fading</td></tr>
+  </tbody>
+</table>
+
+<h3>Color</h3>
+<table>
+  <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>r</code></td><td>int</td><td>255</td><td>Red channel (0&ndash;255)</td></tr>
+    <tr><td><code>g</code></td><td>int</td><td>255</td><td>Green channel (0&ndash;255)</td></tr>
+    <tr><td><code>b</code></td><td>int</td><td>255</td><td>Blue channel (0&ndash;255)</td></tr>
+    <tr><td><code>randr</code></td><td>int</td><td>0</td><td>Random red offset (&plusmn; range, clamped 0&ndash;255)</td></tr>
+    <tr><td><code>randg</code></td><td>int</td><td>0</td><td>Random green offset (&plusmn; range, clamped 0&ndash;255)</td></tr>
+    <tr><td><code>randb</code></td><td>int</td><td>0</td><td>Random blue offset (&plusmn; range, clamped 0&ndash;255)</td></tr>
+  </tbody>
+</table>
+
+<h3>Visual Effects</h3>
+<table>
+  <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>shadowoffset</code></td><td>float</td><td>2.0</td><td>Drop shadow offset in pixels (0 = no shadow)</td></tr>
+    <tr><td><code>box_alpha</code></td><td>float</td><td>0.0</td><td>Background box opacity (0 = invisible, 1 = opaque)</td></tr>
+    <tr><td><code>box_col</code></td><td>R,G,B</td><td>&mdash;</td><td>Background box color (e.g. <code>0,0,0</code>)</td></tr>
+    <tr><td><code>box_left</code></td><td>float</td><td>&mdash;</td><td>Box left edge (0.0&ndash;1.0)</td></tr>
+    <tr><td><code>box_right</code></td><td>float</td><td>&mdash;</td><td>Box right edge (0.0&ndash;1.0)</td></tr>
+    <tr><td><code>box_top</code></td><td>float</td><td>&mdash;</td><td>Box top edge (0.0&ndash;1.0)</td></tr>
+    <tr><td><code>box_bottom</code></td><td>float</td><td>&mdash;</td><td>Box bottom edge (0.0&ndash;1.0)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-note">
+  <div class="callout-label">Supertext Slots</div>
+  The visualizer supports up to <strong>10 simultaneous text overlays</strong>. New messages are placed in the next free slot. If a new message targets the same <code>x</code>/<code>y</code> position as an existing non-animated message, the old one is ended early.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     8. STYLES
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="styles"><span class="h-num">08</span> Styles</h2>
+
+<p>Styles are <strong>named parameter presets</strong> configured in the Remote's Style editor. They store a set of message parameters (position, timing, growth, animation, etc.) that get appended to every message sent while the style is active.</p>
+
+<pre><code><span class="cmd">STYLE</span><span class="sep">=</span><span class="val">Style A</span><span class="sep">|</span><span class="msg">This message uses Style A's parameters</span>
+<span class="cmd">STYLE</span><span class="sep">=</span><span class="val">Style B</span><span class="sep">|</span><span class="msg">Now using Style B</span></code></pre>
+
+<p>Styles are matched by name (case-insensitive). If a style isn't found, a status message is shown. Styles are saved in the Remote's configuration.</p>
+
+<div class="callout callout-tip">
+  <div class="callout-label">Tip</div>
+  Use styles to avoid repeating the same positioning/timing parameters. Set up styles like "Center Fade", "Bottom Slide", "Random Scatter" in the Remote, then reference them by name in your script.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     9. PRESETS
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="presets"><span class="h-num">09</span> Presets</h2>
+
+<p>Presets are <code>.milk</code> files that define the visualizer's rendering behavior. Use the <code>PRESET=</code> command to load a specific preset:</p>
+
+<pre><code><span class="cmt"># Relative path (from Milkwave base directory)</span>
+<span class="cmd">PRESET</span><span class="sep">=</span><span class="val">resources\presets\Milkwave\01 - Martin - blue haze.milk</span>
+
+<span class="cmt"># Absolute path</span>
+<span class="cmd">PRESET</span><span class="sep">=</span><span class="val">C:\Presets\MyPreset.milk</span>
+
+<span class="cmt"># Combined with a message</span>
+<span class="cmd">PRESET</span><span class="sep">=</span><span class="val">resources\presets\Milkwave\cool.milk</span><span class="sep">|</span><span class="msg">Check out this preset!</span></code></pre>
+
+<p>The visualizer will also update its internal preset index to match the loaded file, so <code>NEXT</code>/<code>PREV</code> will navigate relative to the loaded preset's position in the directory.</p>
+
+<!-- ═══════════════════════════════════════════════════════════
+     10. SEND & SPRITES
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="send"><span class="h-num">10</span> SEND &amp; Sprites</h2>
+
+<p>The <code>SEND=</code> command sends characters or keycodes directly to the Visualizer window.</p>
+
+<h3>Sprite Triggering</h3>
+<p>Typing a two-digit number triggers the corresponding sprite (00&ndash;99):</p>
+<pre><code><span class="cmd">SEND</span><span class="sep">=</span><span class="val">00</span>    <span class="cmt"># Trigger sprite 00</span>
+<span class="cmd">SEND</span><span class="sep">=</span><span class="val">99</span>    <span class="cmt"># Trigger sprite 99</span></code></pre>
+
+<h3>Keycodes</h3>
+<p>Prefix with <code>0x</code> to send a virtual keycode (hexadecimal):</p>
+<pre><code><span class="cmd">SEND</span><span class="sep">=</span><span class="val">0x73</span>   <span class="cmt"># F4 key</span>
+<span class="cmd">SEND</span><span class="sep">=</span><span class="val">0x20</span>   <span class="cmt"># Space key</span></code></pre>
+
+<p>See <a href="https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes" style="color: var(--cyan);">Microsoft Virtual Key Codes</a> for the full list.</p>
+
+<h3>Unicode Characters</h3>
+<p>Any other string is sent as Unicode characters to the Visualizer window:</p>
+<pre><code><span class="cmd">SEND</span><span class="sep">=</span><span class="val">abc</span>   <span class="cmt"># Sends characters 'a', 'b', 'c'</span></code></pre>
+
+<!-- ═══════════════════════════════════════════════════════════
+     11. SETTINGS COMMANDS
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="settings"><span class="h-num">11</span> Settings Commands</h2>
+
+<p>These commands modify the Remote's Settings tab values, which affect how the visualizer renders.</p>
+
+<h4>Speed &amp; Frame Rate</h4>
+<ul>
+  <li><code>TIME=<em>n</em></code> &mdash; Time factor multiplier (affects overall preset speed)</li>
+  <li><code>FRAME=<em>n</em></code> &mdash; Frame factor (affects per-frame progression)</li>
+  <li><code>FPS=<em>n</em></code> &mdash; FPS factor (affects target frame rate)</li>
+</ul>
+
+<h4>Visualization</h4>
+<ul>
+  <li><code>INTENSITY=<em>n</em></code> &mdash; Controls <code>vis_intensity</code> shader variable</li>
+  <li><code>SHIFT=<em>n</em></code> &mdash; Controls <code>vis_shift</code> shader variable (can be negative)</li>
+  <li><code>VERSION=<em>n</em></code> &mdash; Controls <code>vis_version</code> shader variable (integer)</li>
+  <li><code>QUALITY=<em>n</em></code> &mdash; Render quality/pixelization level</li>
+</ul>
+
+<h4>Color Shifting</h4>
+<ul>
+  <li><code>HUE=<em>n</em></code> &mdash; Shift the overall hue of the visualization</li>
+  <li><code>SATURATION=<em>n</em></code> &mdash; Shift saturation</li>
+  <li><code>BRIGHTNESS=<em>n</em></code> &mdash; Shift brightness</li>
+</ul>
+
+<p>All values are floats clamped to the Remote's UI control range.</p>
+
+<!-- ═══════════════════════════════════════════════════════════
+     12. EXAMPLES
+     ═══════════════════════════════════════════════════════════ -->
+<h2 id="examples"><span class="h-num">12</span> Examples</h2>
+
+<h3>Basic Script</h3>
+<pre><code><span class="cmt"># Set up timing and initial style</span>
+<span class="cmd">BPM</span><span class="sep">=</span><span class="val">120</span><span class="sep">|</span><span class="cmd">BEATS</span><span class="sep">=</span><span class="val">8</span><span class="sep">|</span><span class="cmd">STYLE</span><span class="sep">=</span><span class="val">Center Fade</span>
+
+<span class="cmt"># Each line plays every 4 seconds (120 BPM * 8 beats)</span>
+<span class="msg">Welcome!</span>
+<span class="cmd">NEXT</span><span class="sep">|</span><span class="msg">New preset loaded</span>
+<span class="cmd">COLOR</span><span class="sep">=</span><span class="val">255,200,0</span><span class="sep">|</span><span class="msg">Golden text</span>
+<span class="cmd">STOP</span></code></pre>
+
+<h3>Animated Messages</h3>
+<pre><code><span class="cmt"># Text slides in from different directions</span>
+<span class="cmd">MSG</span><span class="sep">=</span><span class="key">startx</span><span class="sep">=</span><span class="val">0</span><span class="sep">;</span><span class="key">starty</span><span class="sep">=</span><span class="val">0</span><span class="sep">;</span><span class="key">x</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">y</span><span class="sep">=</span><span class="val">0.4</span><span class="sep">;</span><span class="key">movetime</span><span class="sep">=</span><span class="val">1.0</span><span class="sep">;</span><span class="key">time</span><span class="sep">=</span><span class="val">4.0</span><span class="sep">;</span><span class="key">text</span><span class="sep">=</span><span class="val">From top-left</span>
+<span class="cmd">MSG</span><span class="sep">=</span><span class="key">startx</span><span class="sep">=</span><span class="val">1</span><span class="sep">;</span><span class="key">starty</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">x</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">y</span><span class="sep">=</span><span class="val">0.5</span><span class="sep">;</span><span class="key">movetime</span><span class="sep">=</span><span class="val">1.0</span><span class="sep">;</span><span class="key">easemode</span><span class="sep">=</span><span class="val">1</span><span class="sep">;</span><span class="key">text</span><span class="sep">=</span><span class="val">From right</span></code></pre>
+
+<h3>Preset Show with Timing Changes</h3>
+<pre><code><span class="cmd">BPM</span><span class="sep">=</span><span class="val">120</span><span class="sep">|</span><span class="cmd">BEATS</span><span class="sep">=</span><span class="val">8</span>
+<span class="cmd">PRESET</span><span class="sep">=</span><span class="val">resources\presets\Milkwave\cool.milk</span><span class="sep">|</span><span class="msg">Check this out</span>
+<span class="msg">Getting faster...</span>
+<span class="cmd">BPM</span><span class="sep">=</span><span class="val">180</span><span class="sep">|</span><span class="cmd">BEATS</span><span class="sep">=</span><span class="val">4</span><span class="sep">|</span><span class="cmd">PRESET</span><span class="sep">=</span><span class="val">resources\presets\Milkwave\intense.milk</span>
+<span class="cmd">RESET</span><span class="sep">|</span><span class="cmd">SIZE</span><span class="sep">=</span><span class="val">50</span><span class="sep">|</span><span class="msg">BOOM!</span>
+
+<span class="cmt"># Blank line = one interval of silence</span>
+
+<span class="cmd">SIZE</span><span class="sep">=</span><span class="val">80</span><span class="sep">|</span><span class="msg">BIGGER BOOM!</span>
+<span class="cmd">STOP</span></code></pre>
+
+<h3>MIDI-Friendly Script</h3>
+<pre><code><span class="cmt"># Lines designed for MIDI triggers (LINE=CURR/NEXT/PREV)</span>
+<span class="cmd">PRESET</span><span class="sep">=</span><span class="val">resources\presets\chill.milk</span><span class="sep">|</span><span class="cmd">INTENSITY</span><span class="sep">=</span><span class="val">0.8</span><span class="sep">|</span><span class="msg">Chill mode</span>
+<span class="cmd">PRESET</span><span class="sep">=</span><span class="val">resources\presets\hype.milk</span><span class="sep">|</span><span class="cmd">INTENSITY</span><span class="sep">=</span><span class="val">1.5</span><span class="sep">|</span><span class="msg">Hype!</span>
+<span class="cmd">CLEARSPRITES</span><span class="sep">|</span><span class="cmd">CLEARTEXTS</span><span class="sep">|</span><span class="msg">Reset everything</span>
+<span class="cmd">HUE</span><span class="sep">=</span><span class="val">-0.5</span><span class="sep">|</span><span class="cmd">SATURATION</span><span class="sep">=</span><span class="val">1.2</span><span class="sep">|</span><span class="msg">Color shift!</span></code></pre>
+
+<h3>Background Box Text</h3>
+<pre><code><span class="cmd">MSG</span><span class="sep">=</span><span class="key">text</span><span class="sep">=</span><span class="val">Important announcement</span><span class="sep">;</span><span class="key">size</span><span class="sep">=</span><span class="val">40</span><span class="sep">;</span><span class="key">time</span><span class="sep">=</span><span class="val">8</span><span class="sep">;</span><span class="key">box_alpha</span><span class="sep">=</span><span class="val">0.6</span><span class="sep">;</span><span class="key">box_col</span><span class="sep">=</span><span class="val">0,0,0</span><span class="sep">;</span><span class="key">box_left</span><span class="sep">=</span><span class="val">0.15</span><span class="sep">;</span><span class="key">box_right</span><span class="sep">=</span><span class="val">0.85</span><span class="sep">;</span><span class="key">box_top</span><span class="sep">=</span><span class="val">0.42</span><span class="sep">;</span><span class="key">box_bottom</span><span class="sep">=</span><span class="val">0.58</span></code></pre>
+
+<hr>
+
+<p style="text-align: center; color: var(--steel-dim, #3a4a54); font-size: 11px; margin-top: 40px;">
+  Milkwave Script Guide &mdash; Generated from the <a href="https://github.com/IkeC/Milkwave" style="color: var(--steel);">Milkwave</a> source code
+</p>
+
+</body>
+</html>
